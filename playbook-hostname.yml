@@ -1,0 +1,9 @@
+---
+- hosts: all
+
+  tasks:
+
+    - name: "Configure hostname"
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+      become: true

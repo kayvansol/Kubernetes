@@ -1,0 +1,10 @@
+---
+- hosts: all
+
+  tasks:
+
+    - name: "Set new IP adress"
+      ip: "{{ ansible_host }}"
+      interface: enp0s8
+
+      
