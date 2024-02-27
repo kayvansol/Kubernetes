@@ -11,7 +11,7 @@
   tasks:
 
 
-    - name: Print DEB architecture (0)
+    - name: Print initialization (0)
       debug:
         msg: "Installing docker 24.0.0 on ubuntu 22.04 is going to start ..."
 
