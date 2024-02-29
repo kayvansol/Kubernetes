@@ -1,0 +1,64 @@
+# sudo ansible servers -m ping -i inventory.ini -u root
+# sudo ansible-playbook -i inventory.ini kubeadm.yml -u root
+
+---
+- hosts: all
+
+  become: yes
+  vars:
+    user: "{{ ansible_env.USER }}"
+
+  tasks:
+    
+
+    - name: kubeadm, kubelet and kubectl initialization ...
+      debug:
+        msg: "Installing kubeadm, kubelet and kubectl is going to start 
+                (based on https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/)"
+
+
+    - name: Add Kubernetes GPG key
+      ansible.builtin.shell: "{{ item }}"
+      with_items:
+        - curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | 
+            sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+
+  
+    - name: Add Kubernetes repo     
+      ansible.builtin.apt_repository:
+        filename: kubernetes
+        repo: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] 
+                https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /'
+        state: present
+
+        
+    - name: Update Repository cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+        force_apt_get: true
+
+
+    - name: Downloding kubelet, kubeadm and kubectl ...
+      debug:
+        msg: "Downloding docker & containerd ..."
+
+
+    - name: Install kubelet, kubeadm and kubectl
+      ansible.builtin.apt:
+        pkg:
+          - kubelet
+          - kubeadm
+          - kubectl
+
+
+    - name: Hold kubelet, kubeadm and kubectl
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold  
+      loop:
+        - kubelet 
+        - kubeadm 
+        - kubectl        
+

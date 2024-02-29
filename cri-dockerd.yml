@@ -1,0 +1,105 @@
+# sudo ansible servers -m ping -i inventory.ini -u root
+# sudo ansible-playbook -i inventory.ini cri-dockerd.yml -u root
+
+---
+- hosts: all
+
+  become: yes
+  vars:
+    user: "{{ ansible_env.USER }}"
+
+  tasks:
+    
+    
+    - name: cri-dockerd initialization
+      debug:
+        msg: "Installation of cri-dockerd is going to start 
+                (based on https://github.com/Mirantis/cri-dockerd)"
+
+
+    - name: Create directory for cri-dockerd
+      ansible.builtin.file:
+        path: /opt/cri-dockerd
+        state: directory
+        mode: '0755'
+    
+
+    - name: Download cri-dockerd
+      get_url:
+        url: https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.10/cri-dockerd-0.3.10.amd64.tgz
+        dest: /opt/cri-dockerd
+        timeout: 300
+
+    - name: Extract cri-dockerd-0.3.10.amd64.tgz into /opt/cri-dockerd
+      ansible.builtin.unarchive:
+        src: /opt/cri-dockerd/cri-dockerd-0.3.10.amd64.tgz
+        dest: /opt/cri-dockerd
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '775'
+
+
+    - name: Create directory for opt/packaging/systemd
+      ansible.builtin.file:
+        path: /opt/packaging/systemd
+        state: directory
+        owner: root
+        group: root
+        recurse: yes
+        mode: '0755'
+
+
+    - name: Download cri-dockerd.service & cri-dockerd.socket
+      get_url:
+        url: "{{ item }}" 
+        dest: /opt/packaging/systemd
+      loop:
+        - https://github.com/Mirantis/cri-dockerd/raw/master/packaging/systemd/cri-docker.service
+        - https://github.com/Mirantis/cri-dockerd/raw/master/packaging/systemd/cri-docker.socket
+
+
+    - name: Install cri-dockerd service & socket
+      ansible.builtin.copy:
+        src: /opt/cri-dockerd/cri-dockerd/cri-dockerd
+        dest: /usr/local/bin/cri-dockerd
+        owner: root
+        group: root
+        mode: '0755'
+        remote_src: yes
+
+
+    - name: Install cri-dockerd service & socket
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /etc/systemd/system        
+        remote_src: yes
+      loop:
+        - /opt/packaging/systemd/cri-docker.service
+        - /opt/packaging/systemd/cri-docker.socket
+
+
+    - name: Install cri-dockerd service & socket
+      ansible.builtin.shell: "{{ item }}"
+      with_items:
+        - sed -i -e 's,/usr/bin/cri-dockerd,/usr/local/bin/cri-dockerd,' /etc/systemd/system/cri-docker.service
+
+
+    - name: Just force systemd to reread configs
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+
+    - name: Enable and start cri-dockerd services
+      ansible.builtin.systemd:
+        name: "cri-docker.service"
+        enabled: true
+        state: started
+
+
+    - name: Enable and start cri-dockerd services
+      ansible.builtin.systemd:
+        name: "cri-docker.socket"
+        enabled: true
+        state: started
+
