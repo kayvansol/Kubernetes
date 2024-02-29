@@ -52,6 +52,13 @@
       when:
         - ansible_distribution == "Ubuntu"
 
+    #-------------------------------------------------------------------
+
+    - name: Docker initialization
+      debug:
+        msg: "Installation of docker is going to start ... 
+                (based on https://docs.docker.com/engine/install/ubuntu/"
+
 
     - name: Install required packages (6)
       ansible.builtin.apt:
@@ -59,6 +66,7 @@
           - apt-transport-https
           - ca-certificates
           - curl
+          - gpg
           - gnupg
           - software-properties-common
 
@@ -124,4 +132,138 @@
         - docker.service
         - containerd.service
 
+    #-------------------------------------------------------------------
+
+
+    - name: cri-dockerd initialization
+      debug:
+        msg: "Installation of cri-dockerd is going to start 
+                (based on https://github.com/Mirantis/cri-dockerd)"
+
+
+    - name: Create directory for cri-dockerd
+      ansible.builtin.file:
+        path: /opt/cri-dockerd
+        state: directory
+        mode: '0755'
+
+
+    - name: Download cri-dockerd
+      get_url:
+        url: https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.10/cri-dockerd-0.3.10.amd64.tgz
+        dest: /opt
+
+
+    - name: Extract cri-dockerd-0.3.10.amd64.tgz into /opt/cri-dockerd
+      ansible.builtin.unarchive:
+        src: /opt/cri-dockerd-0.3.10.amd64.tgz
+        dest: /opt
+
+
+    - name: Create directory for opt/packaging/systemd
+      ansible.builtin.file:
+        path: /opt/packaging/systemd
+        state: directory
+        owner: root
+        group: root
+        recurse: yes
+        mode: '0755'
+
+
+    - name: Download cri-dockerd.service & cri-dockerd.socket
+      get_url:
+        url: "{{ item }}" 
+        dest: /opt/packaging/systemd
+      loop:
+        - https://github.com/Mirantis/cri-dockerd/blob/master/packaging/systemd/cri-docker.service
+        - https://github.com/Mirantis/cri-dockerd/blob/master/packaging/systemd/cri-docker.socket
+    
+
+    - name: Install cri-dockerd service & socket
+      ansible.builtin.command: "{{ item }}"  # ansible.builtin.shell: |
+      with_items:
+        - sudo install -o root -g root -m 0755 /opt/cri-dockerd /usr/local/bin/cri-dockerd
+        - sudo install /opt/packaging/systemd/* /etc/systemd/system
+        - sudo sed -i -e 's,/usr/bin/cri-dockerd,/usr/local/bin/cri-dockerd,' /etc/systemd/system/cri-docker.service
+
+
+    #- name: Install cri-dockerd
+    #  ansible.builtin.command: sudo install -o root -g root -m 0755 /opt/cri-dockerd /usr/local/bin/cri-dockerd
+
+    #- name: Install cri-dockerd service & socket
+    #  ansible.builtin.command: sudo install /opt/packaging/systemd/* /etc/systemd/system
+
+    #- name: sed
+    #  ansible.builtin.command: sudo sed -i -e 's,/usr/bin/cri-dockerd,/usr/local/bin/cri-dockerd,' /etc/systemd/system/cri-docker.service
+
+    - name: Just force systemd to reread configs
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+
+    - name: Enable and start cri-dockerd services
+      ansible.builtin.systemd:
+        name: "cri-docker.socket"
+        enabled: true
+        state: started
+
+
+    #-------------------------------------------------------------------
+
+    - name: kubeadm, kubelet and kubectl initialization ...
+      debug:
+        msg: "Installing kubeadm, kubelet and kubectl is going to start 
+                (based on https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/)"
+
+
+    - name: Add Kubernetes GPG key
+      get_url:
+        url: https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key
+        dest: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+  
+    - name: Add Kubernetes repo     
+      ansible.builtin.apt_repository:
+        filename: docker
+        repo: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] 
+                https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /'
+        state: present
+
         
+    - name: Update Repository cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+        force_apt_get: true
+
+
+    - name: Downloding kubelet, kubeadm and kubectl ...
+      debug:
+        msg: "Downloding docker & containerd ..."
+
+
+    - name: Install kubelet, kubeadm and kubectl
+      ansible.builtin.apt:
+        pkg:
+          - kubelet
+          - kubeadm
+          - kubectl
+
+
+    - name: Hold kubelet, kubeadm and kubectl
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold  
+      loop:
+        - kubelet 
+        - kubeadm 
+        - kubectl        
+
+
+    - name: Enable and start kubelet services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop:
+        - kubelet.service
