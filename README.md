@@ -1,6 +1,8 @@
-This repository is for my ansibles
+This repository is for my ansible files.
 
-please use the following scripts :
+The kubernetes folder contains the files for preparing server to install kubernetes cluster and join to the cluster.
+
+Please use the following scripts :
 
 ```
  sudo ansible servers -m ping -i inventory.ini -u root
