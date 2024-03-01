@@ -1,5 +1,5 @@
 # sudo ansible servers -m ping -i inventory.ini -u root
-# sudo ansible-playbook -i inventory.ini kubeadm.yml -u root
+# sudo ansible-playbook -i inventory.ini Kubernetes/kubeadm.yml -u root
 
 ---
 - hosts: all
