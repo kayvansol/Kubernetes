@@ -14,23 +14,23 @@ Kubernetes Cluster :
 
 The control-plane nodes addresses are :
 
-    192.168.56.126
-    192.168.56.127
-    192.168.56.128
+    192.168.56.120
+    192.168.56.121
+    192.168.56.122
 
 HAProxy server (Load Balancer for kube apiserver) address is : 192.168.56.118 
 
 haproxy.cfg :
     stats enable
     (frontend bind to 192.168.56.118:6443)
-    (backend  bind to 192.168.56.126:6443  192.168.56.127:6443  192.168.56.128:6443)
+    (backend  bind to 192.168.56.120:6443  192.168.56.121:6443  192.168.56.122:6443)
 
 For starting a Kubernetes cluster, follow the below lines :
 
-Run below scripts only on 192.168.56.126 :
+Run below scripts only on 192.168.56.120 :
 
 ```
-sudo kubeadm init --control-plane-endpoint="192.168.56.118:6443"  --upload-certs  --apiserver-advertise-address=192.168.56.126
+sudo kubeadm init --control-plane-endpoint="192.168.56.118:6443"  --upload-certs  --apiserver-advertise-address=192.168.56.120
    --pod-network-cidr=192.168.0.0/16   --cri-socket=unix:///var/run/cri-dockerd.sock    --ignore-preflight-errors=all  
 ```
 
