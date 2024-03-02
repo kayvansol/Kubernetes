@@ -63,3 +63,4 @@ kubectl get nodes -o wide
 
 kubectl get pod -A
 ```
+![alt text](https://github.com/kayvansol/Ansibles/blob/main/Images/1.jpeg?raw=true)
