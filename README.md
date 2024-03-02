@@ -20,8 +20,10 @@ The control-plane nodes addresses are :
 
 HAProxy server (Load Balancer for kube apiserver) address is : 192.168.56.118 
 
+haproxy.cfg :
+    stats enable
     (frontend bind to 192.168.56.118:6443)
-    (backend  bind to 192.168.56.126:6443 192.168.56.127:6443 192.168.56.128:6443)
+    (backend  bind to 192.168.56.126:6443  192.168.56.127:6443  192.168.56.128:6443)
 
 For starting a Kubernetes cluster, follow the below lines :
 
@@ -32,16 +34,31 @@ sudo kubeadm init --control-plane-endpoint="192.168.56.118:6443"  --upload-certs
    --pod-network-cidr=192.168.0.0/16   --cri-socket=unix:///var/run/cri-dockerd.sock    --ignore-preflight-errors=all  
 ```
 
-and run the below on other servers (other control-plane nodes or worker nodes) to join to the cluster :
-
-```
-kubeadm join 192.168.56.118:6443 --token ...
-```
-
 And below code for all nodes :
 
 ```
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+Install Calico network policy for on-premises deployments, 50 nodes or less :
+```
+curl https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/calico.yaml -O
+
+kubectl apply -f calico.yaml
+```
+
+and run the below on other servers (other control-plane nodes or worker nodes) to join to the cluster :
+
+```
+kubeadm join 192.168.56.118:6443 --token ...
+```
+
+and at final step enjoy from your cluster :
+
+```
+kubectl get nodes -o wide
+
+kubectl get pod -A
 ```
