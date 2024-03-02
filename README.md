@@ -12,10 +12,16 @@ Please run the following script on all servers :
 
 Kubernetes Cluster :
 
+The control-plane nodes addresses are :
+
+    192.168.56.126
+    192.168.56.127
+    192.168.56.128
+
 HAProxy server (Load Balancer for kube apiserver) address is : 192.168.56.118 
 
     (frontend bind to 192.168.56.118:6443)
-    (backend  bind to 192.168.56.126:6443)
+    (backend  bind to 192.168.56.126:6443 192.168.56.127:6443 192.168.56.128:6443)
 
 For starting a Kubernetes cluster, follow the below lines :
 
