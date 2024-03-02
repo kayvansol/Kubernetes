@@ -64,3 +64,13 @@ kubectl get nodes -o wide
 kubectl get pod -A
 ```
 ![alt text](https://github.com/kayvansol/Ansibles/blob/main/Images/1.jpeg?raw=true)
+
+![alt text](https://github.com/kayvansol/Ansibles/blob/main/Images/2.jpeg?raw=true)
+
+HAProxy Stats :
+
+![alt text](https://github.com/kayvansol/Ansibles/blob/main/Images/3.jpeg?raw=true)
+
+haproxy.cfg :
+
+![alt text](https://github.com/kayvansol/Ansibles/blob/main/Images/4.jpeg?raw=true)
