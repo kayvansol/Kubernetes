@@ -21,6 +21,7 @@ The control-plane nodes addresses are :
 HAProxy server (Load Balancer for kube apiserver) address is : 192.168.56.118 
 
 haproxy.cfg :
+
     stats enable
     (frontend bind to 192.168.56.118:6443)
     (backend  bind to 192.168.56.126:6443  192.168.56.127:6443  192.168.56.128:6443)
