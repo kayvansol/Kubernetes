@@ -1,4 +1,6 @@
-This repository is for my ansible files. 
+![alt text](https://raw.githubusercontent.com/kayvansol/Ingress/main/pics/kubernetes.gif?raw=true)
+
+This repository is for deploying kubernetes on-permises cluster (bare-metal servers). 
 
 The kubernetes folder contains the files for preparing server to install kubernetes cluster or join to the cluster.
 
