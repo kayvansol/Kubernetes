@@ -55,7 +55,7 @@ curl https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/ca
 kubectl apply -f calico.yaml
 ```
 
-and run the below on other servers (other control-plane nodes or worker nodes) to join to the cluster :
+and run the below on other servers (other control-plane or worker nodes) to join to the cluster :
 
 ```
 kubeadm join 192.168.56.118:6443 --token ...
