@@ -146,7 +146,8 @@
         state: directory
         mode: '0755'
     
-
+    # you can download & install .deb package instead from :
+    # https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.10/cri-dockerd_0.3.10.3-0.ubuntu-jammy_amd64.deb
     - name: Download cri-dockerd
       get_url:
         url: https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.10/cri-dockerd-0.3.10.amd64.tgz
