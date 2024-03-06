@@ -25,6 +25,9 @@ The worker nodes addresses are :
     192.168.56.123
     192.168.56.124
 
+The vm's hosted on virtualbox are like the below schema :
+![alt text](https://raw.githubusercontent.com/kayvansol/Ingress/main/pics/vmnet.png?raw=true)
+
 HAProxy server (Load Balancer for kube apiserver) address is : 
 ```
 192.168.56.118 
