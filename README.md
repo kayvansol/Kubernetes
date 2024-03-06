@@ -20,6 +20,11 @@ The control-plane nodes addresses are :
     192.168.56.121
     192.168.56.122
 
+The worker nodes addresses are :
+
+    192.168.56.123
+    192.168.56.124
+
 HAProxy server (Load Balancer for kube apiserver) address is : 
 ```
 192.168.56.118 
