@@ -1,0 +1,330 @@
+# sudo ansible servers -m ping -i inventory.ini -u root
+# sudo ansible-playbook -i inventory.ini Kubernetes/ServerPrepare.yml -u root
+
+---
+- hosts: all
+
+  become: yes
+  vars:
+    user: "{{ ansible_env.USER }}"
+
+  tasks:
+
+
+    - name: Print initialization (0)
+      debug:
+        msg: "Installing docker 24.0.0 on ubuntu 22.04 is going to start ..."
+
+
+    - name: Disable swap (1)
+      shell: |
+        swapoff -a
+
+
+    - name: Disable swap in fstab (2)
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+        replace: '# \1'
+
+
+    - name: Configure hostname (3)
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+      become: true
+
+
+    - name: Add IP address of all hosts to all hosts (4)
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '.*{{ item }}$'
+        line: "{{ hostvars[item].ansible_host }} {{item}}"
+        state: present
+      when: hostvars[item].ansible_host is defined
+      with_items: "{{ groups.all }}"
+
+
+    - name: Disable the ufw firewall (on Ubuntu, if configured). (5)
+      service:
+        name: ufw
+        state: stopped
+        enabled: false
+      when:
+        - ansible_distribution == "Ubuntu"
+
+    #-------------------------------------------------------------------
+
+    - name: Docker initialization
+      debug:
+        msg: "Installation of docker is going to start ... 
+                (based on https://docs.docker.com/engine/install/ubuntu/"
+
+
+    - name: Install required packages (6)
+      ansible.builtin.apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gpg
+          - gnupg
+          - software-properties-common
+
+
+    - name: Create directory for Docker's GPG key (6.1)
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+
+    - name: Add Docker GPG key (6.2)
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+
+
+    - name: Get DEB architecture 
+      shell: dpkg --print-architecture
+      register: deb_architecture
+
+
+    - name: Print DEB architecture
+      debug:
+        msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
+
+
+    - name: Add Docker repo  (6.3)     
+      ansible.builtin.apt_repository:
+        filename: docker
+        repo: 'deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/keyrings/docker.asc] 
+                https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable'
+        state: present
+
+
+    - name: Update Repository cache (7)
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+        force_apt_get: true
+
+    - name: Downloding docker (8)
+      debug:
+        msg: "Downloding docker & containerd ..."
+
+
+    - name: Install Docker stuff (9)
+      apt:
+        pkg:
+          - docker-ce=5:24.0.0-1~ubuntu.22.04~jammy
+          - docker-ce-cli=5:24.0.0-1~ubuntu.22.04~jammy
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+    
+
+    - name: Enable and start Docker services (10)
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop:
+        - docker.service
+        - containerd.service
+
+    #-------------------------------------------------------------------
+
+    - name: cri-dockerd initialization
+      debug:
+        msg: "Installation of cri-dockerd is going to start 
+                (based on https://github.com/Mirantis/cri-dockerd)"
+
+
+    - name: Create directory for cri-dockerd
+      ansible.builtin.file:
+        path: /opt/cri-dockerd
+        state: directory
+        mode: '0755'
+    
+    # you can download & install .deb package instead from :
+    # https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.10/cri-dockerd_0.3.10.3-0.ubuntu-jammy_amd64.deb
+    - name: Download cri-dockerd
+      get_url:
+        url: https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.10/cri-dockerd-0.3.10.amd64.tgz
+        dest: /opt/cri-dockerd
+        timeout: 300
+
+    - name: Extract cri-dockerd-0.3.10.amd64.tgz into /opt/cri-dockerd
+      ansible.builtin.unarchive:
+        src: /opt/cri-dockerd/cri-dockerd-0.3.10.amd64.tgz
+        dest: /opt/cri-dockerd
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '775'
+
+
+    - name: Create directory for opt/packaging/systemd
+      ansible.builtin.file:
+        path: /opt/packaging/systemd
+        state: directory
+        owner: root
+        group: root
+        recurse: yes
+        mode: '0755'
+
+
+    - name: Download cri-dockerd.service & cri-dockerd.socket
+      get_url:
+        url: "{{ item }}" 
+        dest: /opt/packaging/systemd
+      loop:
+        - https://github.com/Mirantis/cri-dockerd/raw/master/packaging/systemd/cri-docker.service
+        - https://github.com/Mirantis/cri-dockerd/raw/master/packaging/systemd/cri-docker.socket
+
+
+    - name: Install cri-dockerd service & socket
+      ansible.builtin.copy:
+        src: /opt/cri-dockerd/cri-dockerd/cri-dockerd
+        dest: /usr/local/bin/cri-dockerd
+        owner: root
+        group: root
+        mode: '0755'
+        remote_src: yes
+
+
+    - name: Install cri-dockerd service & socket
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /etc/systemd/system        
+        remote_src: yes
+      loop:
+        - /opt/packaging/systemd/cri-docker.service
+        - /opt/packaging/systemd/cri-docker.socket
+
+
+    - name: Install cri-dockerd service & socket
+      ansible.builtin.shell: "{{ item }}"
+      with_items:
+        - sed -i -e 's,/usr/bin/cri-dockerd,/usr/local/bin/cri-dockerd,' /etc/systemd/system/cri-docker.service
+
+
+    - name: Just force systemd to reread configs
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+
+    - name: Enable and start cri-dockerd services
+      ansible.builtin.systemd:
+        name: "cri-docker.service"
+        enabled: true
+        state: started
+
+
+    - name: Enable and start cri-dockerd services
+      ansible.builtin.systemd:
+        name: "cri-docker.socket"
+        enabled: true
+        state: started
+
+
+    #-------------------------------------------------------------------
+
+    
+    - name: kubeadm, kubelet and kubectl initialization ...
+      debug:
+        msg: "Installing kubeadm, kubelet and kubectl is going to start 
+                (based on https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/)"
+
+
+    - name: Add Kubernetes GPG key
+      ansible.builtin.shell: "{{ item }}"
+      with_items:
+        - curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | 
+            sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+
+  
+    - name: Add Kubernetes repo     
+      ansible.builtin.apt_repository:
+        filename: kubernetes
+        repo: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] 
+                https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /'
+        state: present
+
+        
+    - name: Update Repository cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+        force_apt_get: true
+
+
+    - name: Downloding kubelet, kubeadm and kubectl ...
+      debug:
+        msg: "Downloding docker & containerd ..."
+
+
+    - name: Install kubelet, kubeadm and kubectl
+      ansible.builtin.apt:
+        pkg:
+          - kubelet
+          - kubeadm
+          - kubectl
+
+
+    - name: Hold kubelet, kubeadm and kubectl
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold  
+      loop:
+        - kubelet 
+        - kubeadm 
+        - kubectl        
+
+
+    #-------------------------------------------------------------------
+
+    - name: Extra Configs initialization ...
+      debug:
+        msg: "Extra Configs started ..."
+
+    
+    - name: Set Docker CgroupDriver (systemd)
+      ansible.builtin.shell:  |
+        cat <<EOF | sudo tee /etc/docker/daemon.json
+                    { 
+                      "exec-opts": ["native.cgroupdriver=systemd"] 
+                    }
+              EOF
+
+
+    - name: reload & restart docker & kubelet ...
+      ansible.builtin.shell: "{{ item }}"
+      with_items:
+        - sudo systemctl daemon-reload
+        - sudo systemctl restart docker        
+        - sudo systemctl restart kubelet
+
+
+    - name: Network Configs ...
+      ansible.builtin.shell:  |
+        cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+                overlay
+                br_netfilter
+              EOF
+        
+        
+    - name: Forwarding IPv4 and letting iptables see bridged traffic
+      ansible.builtin.shell:  |
+        cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+                net.bridge.bridge-nf-call-ip6tables = 1
+                net.bridge.bridge-nf-call-iptables = 1
+                net.ipv4.ip_forward = 1
+              EOF
+      
+      
+    - name: Apply sysctl params without reboot (kernel configs) ...
+      ansible.builtin.shell: "{{ item }}"
+      with_items:
+        - sudo sysctl --system
