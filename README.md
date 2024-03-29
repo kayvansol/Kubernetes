@@ -67,8 +67,19 @@ curl https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/ca
 kubectl apply -f calico.yaml
 ```
 
-and run the below on other servers (other control-plane or worker nodes) to join to the cluster :
+and run the below on other servers to join to the cluster :
 
+On control-plane (e.g. 192.168.56.122) :
+
+```
+kubeadm join 192.168.56.118:6443 --token c4c6wt.2rzubblajmxx7wf1 \
+     --discovery-token-ca-cert-hash sha256:91877d933445148c650e5fa11acca05d455fe1e9e53cd33f8497ad06a2126142 \
+     --control-plane --certificate-key 2e8c3d0a1f2d4aec3e4ccb09a0dd6f43756344269c0b414cdd83c0ef02c0293d \
+     --apiserver-advertise-address=192.168.56.122 
+     --cri-socket=unix:///var/run/cri-dockerd.sock 
+     --ignore-preflight-errors=all
+```
+On worker nodes :
 ```
 kubeadm join 192.168.56.118:6443 --token  c4c6wt.2rzubblajmxx7wf1 \
      --discovery-token-ca-cert-hash sha256:91877d933445148c650e5fa11acca05d455fe1e9e53cd33f8497ad06a2126142 \
