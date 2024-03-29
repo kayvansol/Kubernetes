@@ -45,8 +45,11 @@ For starting a Kubernetes cluster, follow the below lines :
 Run below scripts only on 192.168.56.120 :
 
 ```
-sudo kubeadm init --control-plane-endpoint="192.168.56.118:6443"  --upload-certs  --apiserver-advertise-address=192.168.56.120
-   --pod-network-cidr=192.168.0.0/16   --cri-socket=unix:///var/run/cri-dockerd.sock    --ignore-preflight-errors=all  
+sudo kubeadm init  --control-plane-endpoint="192.168.56.118:6443"   
+      --upload-certs  --apiserver-advertise-address=192.168.56.120
+      --pod-network-cidr=192.168.0.0/16  
+      --cri-socket=unix:///var/run/cri-dockerd.sock  
+      --ignore-preflight-errors=all 
 ```
 
 And below code for all nodes :
@@ -67,7 +70,10 @@ kubectl apply -f calico.yaml
 and run the below on other servers (other control-plane or worker nodes) to join to the cluster :
 
 ```
-kubeadm join 192.168.56.118:6443 --token ...
+kubeadm join 192.168.56.118:6443 --token  c4c6wt.2rzubblajmxx7wf1 \
+     --discovery-token-ca-cert-hash sha256:91877d933445148c650e5fa11acca05d455fe1e9e53cd33f8497ad06a2126142 \
+     --cri-socket=unix:///var/run/cri-dockerd.sock 
+     --ignore-preflight-errors=all
 ```
 
 and at final step enjoy from your cluster :
